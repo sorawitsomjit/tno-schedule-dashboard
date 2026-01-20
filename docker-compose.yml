@@ -2,7 +2,7 @@ services:
   web-app:
     build: .
     ports:
-      - "3333:3333"
+      - "1234:1234"
     restart: always
     environment:
       - NODE_ENV=production

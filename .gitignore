@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# TNO Data Files (Sensitive Actual Data)
+# Ignore all CSV files in the public folder to prevent data leaks
+/public/*.csv
+/public/*.xlsx
+# Ignore sky timing logs (since we store it in localStorage but might create CSVs)
+/public/sky_timing_log.csv
+
+# If you have specific sample/template files you WANT to share, you can un-ignore them like this:
+# !/public/sample_schedule.csv
+
+# Project data in root
+/*.csv
+/*.xlsx
+/*.pdf
