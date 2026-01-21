@@ -4,104 +4,38 @@ This document outlines the major features and architectural changes planned for 
 
 ---
 
-## ⭐️ Immediate Priorities (Short-term)
-These are easy-to-implement updates that provide immediate value to observers:
-
-### 1. Astro Science Window Bar (Sky Timing)
-- **Feature**: Add a visual bar in the "Sky Timing" widget representing the duration from **Astro Dusk** to **Astro Dawn**.
-- **Metrics**: Automatically calculate and display the total "Science time" available in `HH:mm` format.
-- **Visual**: A simple horizontal bar (similar to the observation slots) but representing the full dark sky window.
-
-### 2. Daily Sky Timing Log (CSV)
-- **Goal**: Auto-generate/append to a `sky_timing_log.csv` in the `public/` folder.
-- **Data**: Store date, sunset, twilight limits, sunrise, and total astro-dark duration for historical analysis.
-
-### 3. Shift-Aligned Date Rollover (07:00 AM)
-- **Current**: App synchronizes to the next day at 00:00.
-- **New Logic**: The dashboard should maintain "Today's" view until **07:00 AM** the next day.
-- **Reasoning**: This aligns with the observation shift (19:00 - 05:00), allowing operators to see the current night's schedule until their shift ends.
+## ✅ Completed (Phase 1: Immediate Priorities)
+- [x] **Astro Science Window Bar**: Integrated visual timeline for dark sky duration.
+- [x] **Daily Sky Timing Log**: Automatic localStorage logging with CSV export functionality.
+- [x] **Shift-Aligned Date Rollover**: Dashboard rolls over at **07:00 AM** to match operator shifts.
+- [x] **Docker Deployment**: Containerized with port 1234 configuration.
 
 ---
 
-## 1. Actual Observation Timeline (The "Actuals" Phase)
-**Goal:** Transition from showing only "Allocated Time" (Planned) to "Actual Observation Time" (What really happened).
+## 📅 Phase 2: Actual Observation Timeline
+**Goal:** Transition from showing only "Allocated Time" (Planned) to "Actual Observation Time".
 
-### Key Features:
-- **Actual vs. Allocated Visuals**: A side-by-side or overlapping timeline view in the Day View to show discrepancies between plan and reality.
-- **Google Sheets Integration**:
-    - Build a connector to sync data from the Operator's log (Google Sheets).
-    - Potential implementation: Server-side cron job or a "Sync Now" button in the Admin panel.
-- **Enhanced Data Model**: Expand `ObservationSession` to include `actualStart`, `actualEnd`, `status` (Completed, Weather Loss, Technical Loss, Cancelled).
+- **Actual vs. Allocated Visuals**: Side-by-side timeline view to show discrepancies.
+- **Google Sheets Integration**: Build a connector to sync data from the Operator's log (Google Sheets).
+- **Enhanced Data Model**: Track `actualStart`, `actualEnd`, and `status` (Completed, Weather Loss, etc.).
 
 ---
 
-## 2. Advanced Search & Discovery Page
-**Goal:** A powerful interface for researchers and admins to query historical and future data.
+## 📅 Phase 3: Advanced Search & Analytics
+**Goal:** A powerful interface for researchers and admins.
 
-### Filter Criteria:
-- **Date Range**: Select [Start Date] to [End Date].
-    - *Display*: A vertical list of Day View slots (19:00 - 05:00) for the entire range.
-- **Entity Filters**: 
-    - **Proposal ID**: Search for specific project (e.g., `ID022`).
-    - **Instrument**: Filter by equipment (e.g., `ULSPC`, `MRES`, `LRS`).
-- **Multi-Condition Search**: 
-    - e.g., "Show me all `ID005` sessions using `LRS` in January 2026 that occurred after midnight."
-- **Astronomical Conditions**:
-    - **Moon Phase**: Filter by specific phase or categories (Dark Night, Full Moon, etc.).
-- **Impact & Downtime**:
-    - View only sessions affected by **Weather Conditions** or **Technical Problems**.
-
-### Suggested UI:
-- A "Filter Sidebar" with real-time results.
-- Export results to CSV/Excel button.
+- **Advanced Search**: Filter by Proposal ID, Instrument, Moon Phase, and Date Range.
+- **Allocation Analytics**: Summary of hours per Proposal ID and Monthly Utilization Rate.
+- **Loss Analysis**: Pie charts showing ratios of Weather vs. Technical vs. Successful observations.
 
 ---
 
-## 3. Allocation & Performance Analytics
-**Goal:** A high-level summary of how telescope time is being distributed and utilized.
+## 📅 Phase 4: Automation & AI Insights
+**Goal:** Automate the end-to-end data lifecycle.
 
-### Features:
-- **Time Allocation Summary**: 
-    - Total hours per Proposal ID (Historical and Planned).
-    - Monthly breakdown of "Heavy Users" (IDs with most hours).
-- **Efficiency Metrics**:
-    - **Utilization Rate**: (Actual Hours / Allocated Hours) * 100.
-    - **Loss Analysis**: Pie charts showing ratios of Weather vs. Technical vs. Successful observations.
-- **Cycle Comparison**: Compare Cycle 13 with previous or future cycles.
+- **n8n Automation**: Trigger data sync from Google Sheets to the dashboard.
+- **AI Daily Insights**: Automatic summary of the night's performance and anomaly detection.
+- **Database Backend**: Migrate from CSV to SQLite/PostgreSQL for faster queries.
 
 ---
-
-## 4. Proposed Technical Improvements
-- **Backend Database**: Move from flat CSV files to a lightweight database (e.g., SQLite or PostgreSQL) to support complex filtering and faster queries.
-- **Admin Dashboard**: A secure login for TNO staff to manually override data or upload new log files.
-- **Real-time Sync**: Webhook integration with the All-Sky camera or Weather station to automatically log weather downtime.
-
----
-
-## 5. Deployment & Infrastructure
-- **Custom Port Configuration**: If hosting on shared machines (e.g., L3 Computer), ensure the application port is changed to avoid conflicts with other services like **Grafana** (which defaults to port 3000).
-    - *How to change*: Edit `package.json` scripts or use an environment variable `PORT=4000 npm run dev`.
-- **Dockerization**: Containerize the app for consistent deployment across different TNO workstations.
-
----
-
-## 6. n8n Automation & AI Insights
-**Goal:** Automate the end-to-end data lifecycle from observation logs to analytical reports.
-
-### Proposed Workflow:
-1.  **Data Capture**: Operator records data in **Google Sheets** at the end of each night.
-2.  **n8n Trigger**: n8n (self-hosted) triggers via webhook or periodic polling to fetch the day's logs.
-3.  **Data Processing**: n8n processes raw data, calculating durations for each ID and Instrument.
-4.  **AI Analysis**: Data is sent to an **AI Agent** for:
-    -   Daily observation summary.
-    -   Anomaly detection (e.g., unusual technical downtime).
-    -   Efficiency reporting.
-5.  **Dashboard Integration**:
-    -   n8n pushes **Raw Data** to the Dashboard (updating the "Actual Time" view).
-    -   n8n pushes the **AI Report** to a new "Daily Insights" panel in the web-app.
-6.  **Comparison**: The web-app automatically compares the synced Actual data with the originally Allocated time.
-
----
-
-> [!NOTE]
-> This roadmap serves as a guide for future development sprints. Priorities can be adjusted based on TNO operational needs.
+> For technical details, refer to the [README.md](./README.md).

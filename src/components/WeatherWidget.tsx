@@ -10,8 +10,9 @@ import { logSkyTiming, exportSkyTimingCSV, getSkyTimingLog } from '@/utils/skyTi
 const LAT = 18.5853;
 const LON = 98.4872;
 
-// Placeholder API Key (User to replace)
-const API_KEY = 'fac2a57f8cbe6b826445fb6570d465a2';
+// OpenWeatherMap API Configuration
+// Set NEXT_PUBLIC_OPENWEATHER_API_KEY in your .env file
+const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || 'fac2a57f8cbe6b826445fb6570d465a2';
 
 // Toggle: Enable/Disable Sky Timing Log Download Feature
 const ENABLE_SKY_LOG_DOWNLOAD = true; // Set to false to hide download button
