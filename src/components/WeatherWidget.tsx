@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import SunCalc from 'suncalc';
-import { Cloud, Droplets, Wind, Sun, Moon, Sunrise, Sunset, Clock, Thermometer, ArrowDown, ArrowUp, MapPin, ChevronDown, ChevronUp, Download } from 'lucide-react';
-import { format, differenceInMinutes, addDays } from 'date-fns';
+import { Cloud, Droplets, Wind, Sun, Moon, Clock, ArrowDown, ArrowUp, MapPin, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { format, differenceInMinutes } from 'date-fns';
 import { logSkyTiming, exportSkyTimingCSV, getSkyTimingLog } from '@/utils/skyTimingLogger';
 
 // Doi Inthanon Coordinates
@@ -12,7 +12,7 @@ const LON = 98.4872;
 
 // OpenWeatherMap API Configuration
 // Set NEXT_PUBLIC_OPENWEATHER_API_KEY in your .env file
-const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || 'fac2a57f8cbe6b826445fb6570d465a2';
+const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || '';
 
 // Toggle: Enable/Disable Sky Timing Log Download Feature
 const ENABLE_SKY_LOG_DOWNLOAD = true; // Set to false to hide download button
@@ -118,6 +118,15 @@ export const WeatherWidget: React.FC = () => {
         const fetchWeather = async () => {
             try {
                 if (!API_KEY) {
+                    setWeather({
+                        temp: 0,
+                        humidity: 0,
+                        windSpeed: 0,
+                        clouds: 0,
+                        weather: 'Unavailable',
+                        icon: ''
+                    });
+                    setForecast([]);
                     return;
                 }
 

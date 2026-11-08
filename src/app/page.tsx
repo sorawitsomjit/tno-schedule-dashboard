@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DateControlPanel } from '@/components/DateControlPanel';
 import { DayObservationView } from '@/components/DayObservationView';
 import { ScheduleTableView } from '@/components/ScheduleTableView';
@@ -15,6 +15,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   const [today, setToday] = useState<Date | null>(null);
+  const selectedDateRef = useRef<Date | null>(null);
 
   // Helper: Get observation date based on shift schedule
   // If before 07:00 AM, use previous day (aligns with 19:00-05:00 shift)
@@ -34,6 +35,7 @@ export default function Home() {
     // Set initial date only on client (shift-aligned)
     const observationDate = getObservationDate();
     setSelectedDate(observationDate);
+    selectedDateRef.current = observationDate;
     setToday(observationDate);
 
     // Fetch CSV (Defaults to split files in csvParser)
@@ -50,11 +52,12 @@ export default function Home() {
     // Auto-update logic: Check every minute if we need to roll over to next day
     const interval = setInterval(() => {
       const newObservationDate = getObservationDate();
-      const currentSelected = selectedDate || new Date();
+      const currentSelected = selectedDateRef.current || new Date();
 
       // If observation date changed (crossed 07:00 AM), update
       if (format(newObservationDate, 'yyyy-MM-dd') !== format(currentSelected, 'yyyy-MM-dd')) {
         setSelectedDate(newObservationDate);
+        selectedDateRef.current = newObservationDate;
         setToday(newObservationDate);
       }
     }, 60000); // Check every minute
@@ -78,7 +81,10 @@ export default function Home() {
     <main className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto space-y-6 pb-20">
       <DateControlPanel
         selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
+        onDateChange={(date) => {
+          setSelectedDate(date);
+          selectedDateRef.current = date;
+        }}
         today={today || new Date()}
       />
 

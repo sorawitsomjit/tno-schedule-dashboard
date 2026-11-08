@@ -142,14 +142,14 @@ export const DayObservationView: React.FC<DayObservationViewProps> = ({ date, se
                                     key={session.id}
                                     className={cn(
                                         "absolute h-6 top-2 rounded-sm opacity-90 hover:opacity-100 transition-all cursor-pointer border-l-2 border-r-2 border-white/10 shadow-lg",
-                                        getTypeColor(session.type, index, session.telescope, session.proposalId).split(' ')[0]
+                                        getTypeColor(session.type || 'PROPOSAL', index, session.telescope, session.proposalId).split(' ')[0]
                                     )}
                                     style={getPositionAndWidth(session.timeStart, session.timeEnd)}
                                     title={`${session.telescope} - ${session.proposalId} (${session.instrument})`}
                                 >
                                     <span className={cn(
                                         "hidden md:block text-xs font-bold truncate px-1.5 pt-1",
-                                        isLightColor(getTypeColor(session.type, index, session.telescope, session.proposalId))
+                                        isLightColor(getTypeColor(session.type || 'PROPOSAL', index, session.telescope, session.proposalId))
                                             ? "text-slate-900"
                                             : "text-white/90"
                                     )}>
@@ -169,14 +169,14 @@ export const DayObservationView: React.FC<DayObservationViewProps> = ({ date, se
                                     key={session.id}
                                     className={cn(
                                         "absolute h-6 top-2 rounded-sm opacity-90 hover:opacity-100 transition-all cursor-pointer border-l-2 border-r-2 border-white/10 shadow-lg",
-                                        getTypeColor(session.type, index, session.telescope, session.proposalId).split(' ')[0]
+                                        getTypeColor(session.type || 'PROPOSAL', index, session.telescope, session.proposalId).split(' ')[0]
                                     )}
                                     style={getPositionAndWidth(session.timeStart, session.timeEnd)}
                                     title={`${session.telescope} - ${session.proposalId} (${session.instrument})`}
                                 >
                                     <span className={cn(
                                         "hidden md:block text-xs font-bold truncate px-1.5 pt-1",
-                                        isLightColor(getTypeColor(session.type, index, session.telescope, session.proposalId))
+                                        isLightColor(getTypeColor(session.type || 'PROPOSAL', index, session.telescope, session.proposalId))
                                             ? "text-slate-900"
                                             : "text-white/90"
                                     )}>
@@ -208,7 +208,7 @@ export const DayObservationView: React.FC<DayObservationViewProps> = ({ date, se
                         )}
 
                         {/* Indicator */}
-                        <div className={cn("hidden md:block w-5 h-5 rounded-full mt-1.5 md:mt-0", getTypeColor(session.type, index, session.telescope, session.proposalId).split(' ')[0])} />
+                        <div className={cn("hidden md:block w-5 h-5 rounded-full mt-1.5 md:mt-0", getTypeColor(session.type || 'PROPOSAL', index, session.telescope, session.proposalId).split(' ')[0])} />
 
                         {/* Time */}
                         <div className="min-w-[140px]">
@@ -232,19 +232,19 @@ export const DayObservationView: React.FC<DayObservationViewProps> = ({ date, se
                         <div className="flex-1 z-10">
                             <div className="flex items-center gap-2">
                                 <span className="text-white font-bold text-lg">{session.proposalId}</span>
-                                {session.type !== 'PROPOSAL' && (
+                                {(session.type || 'PROPOSAL') !== 'PROPOSAL' && (
                                     <span className="text-xs bg-red-900/50 text-red-200 px-1.5 py-0.5 rounded border border-red-800">
                                         {session.type}
                                     </span>
                                 )}
                             </div>
-                            <div className="text-slate-300 text-sm">{session.piName}</div>
+                            <div className="text-slate-300 text-sm">{session.piName || 'Unknown PI'}</div>
                         </div>
 
                         {/* Research Field */}
                         <div className="md:text-right min-w-[150px] z-10">
                             <div className="text-sm text-slate-400">Field of Research</div>
-                            <div className="text-white font-medium">{session.fieldOfResearch}</div>
+                            <div className="text-white font-medium">{session.fieldOfResearch || 'N/A'}</div>
                         </div>
                     </div>
                 ))}

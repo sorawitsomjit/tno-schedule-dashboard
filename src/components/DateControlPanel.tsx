@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useEffect } from 'react';
-import { CalendarIcon, ChevronLeft, ChevronRight, RefreshCw, BarChart3 } from 'lucide-react';
+import React from 'react';
+import { ChevronLeft, ChevronRight, BarChart3, Database } from 'lucide-react';
 import { format, addDays, subDays, isSameDay } from 'date-fns';
 import Link from 'next/link';
 import { cn } from '@/utils/cn';
-import { DayPicker } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
 
 interface DateControlPanelProps {
     selectedDate: Date;
@@ -31,6 +29,10 @@ export const DateControlPanel: React.FC<DateControlPanelProps> = ({ selectedDate
                     <Link href="/stats" className="ml-2 flex items-center gap-1 text-[10px] md:text-sm text-slate-400 hover:text-blue-400 transition-colors bg-slate-800/50 px-2 md:px-3 py-1 rounded-full border border-slate-700">
                         <BarChart3 size={14} />
                         <span>Stats</span>
+                    </Link>
+                    <Link href="/admin/actual-vs-allocated" className="ml-2 flex items-center gap-1 text-[10px] md:text-sm text-slate-400 hover:text-purple-400 transition-colors bg-slate-800/50 px-2 md:px-3 py-1 rounded-full border border-slate-700">
+                        <Database size={14} />
+                        <span>Admin</span>
                     </Link>
                 </div>
                 <div className="flex gap-3 text-[10px] font-mono text-slate-500 ml-0.5">
