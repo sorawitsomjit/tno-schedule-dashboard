@@ -1,255 +1,154 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { PROPOSAL_COLORS, PROPOSAL_COLORS_24M, PROPOSAL_COLORS_1M, DEFAULT_COLOR_ROTATION } from '@/config/proposalColors';
-import { ObservationSession } from '@/types/schedule';
+import { ObservationSession, Telescope } from '@/types/schedule';
 import { format } from 'date-fns';
 import { cn } from '@/utils/cn';
-import { Moon, Save, Edit3, Telescope } from 'lucide-react';
+import { nightRange, hourTicks } from '@/utils/timeline';
+import { fromNightMinutes } from '@/utils/time';
+import { instrumentText, sessionColor, sessionLabel, typeBadge } from '@/utils/sessionDisplay';
+import { SessionBar } from '@/components/SessionBar';
+import { Moon, Save, Edit3, Telescope as TelescopeIcon } from 'lucide-react';
 
 interface DayObservationViewProps {
     date: Date;
-    sessions: ObservationSession[];
+    sessions: ObservationSession[]; // already sorted in night order
 }
 
-const TIMELINE_START_HOUR = 19;
-const TIMELINE_END_HOUR = 29; // 05:00 next day
-const TOTAL_HOURS = TIMELINE_END_HOUR - TIMELINE_START_HOUR;
+// Keep the first/last hour labels inside the axis.
+const tickShift = (pct: number) => (pct < 2 ? 'none' : pct > 98 ? 'translateX(-100%)' : 'translateX(-50%)');
+
+const TELESCOPES: { id: Telescope; label: string; accent: string }[] = [
+    { id: '2.4m', label: '2.4m', accent: 'text-blue-400' },
+    { id: '1m', label: '1m', accent: 'text-purple-400' },
+];
 
 export const DayObservationView: React.FC<DayObservationViewProps> = ({ date, sessions }) => {
     const [note, setNote] = useState('');
     const dateKey = format(date, 'yyyy-MM-dd');
 
     useEffect(() => {
-        const savedNote = localStorage.getItem(`note-${dateKey}`);
-        setNote(savedNote || '');
+        try {
+            setNote(localStorage.getItem(`note-${dateKey}`) || '');
+        } catch {
+            setNote('');
+        }
     }, [dateKey]);
 
     const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const newNote = e.target.value;
-        setNote(newNote);
-        localStorage.setItem(`note-${dateKey}`, newNote);
-    };
-
-    const getPositionAndWidth = (start: string, end: string) => {
-        const parseTime = (t: string) => {
-            const [h, m] = t.split(':').map(Number);
-            return (h < 12 ? h + 24 : h) + m / 60;
-        };
-
-        const startTimeHash = parseTime(start);
-        let endTimeHash = parseTime(end);
-
-        const startOffset = Math.max(0, startTimeHash - TIMELINE_START_HOUR);
-        const duration = endTimeHash - startTimeHash;
-
-        const left = (startOffset / TOTAL_HOURS) * 100;
-        const width = (duration / TOTAL_HOURS) * 100;
-
-        return { left: `${left}%`, width: `${width}%` };
-    };
-
-    // Helper: Generate consistent hash from string to pick a color index
-    const stringToColorIndex = (str: string) => {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        setNote(e.target.value);
+        try {
+            localStorage.setItem(`note-${dateKey}`, e.target.value);
+        } catch {
+            // storage unavailable: keep the note in memory only
         }
-        return Math.abs(hash);
     };
 
-    // Helper: Determine if a Tailwind bg color is light (needs dark text)
-    const isLightColor = (bgClass: string): boolean => {
-        const lightColors = [
-            'bg-white', 'bg-lime-200', 'bg-amber-200', 'bg-orange-200', 'bg-yellow-200',
-            'bg-cyan-200', 'bg-violet-200', 'bg-rose-50', 'bg-rose-200', 'bg-green-200',
-            'bg-neutral-300', 'bg-gray-400'
-        ];
-        return lightColors.some(light => bgClass.includes(light));
-    };
-
-    const getTypeColor = (type: string, index: number, telescope: string, proposalId: string) => {
-        // 1. Check telescope-specific colors first
-        if (telescope === '2.4m' && PROPOSAL_COLORS_24M[proposalId]) {
-            return PROPOSAL_COLORS_24M[proposalId];
-        }
-        if (telescope === '1m' && PROPOSAL_COLORS_1M[proposalId]) {
-            return PROPOSAL_COLORS_1M[proposalId];
-        }
-
-        // 2. Check shared Engineering/Maintenance colors
-        if (PROPOSAL_COLORS[proposalId]) return PROPOSAL_COLORS[proposalId];
-
-        // 3. Telescope 1m default theme (if not overridden by ID)
-        if (telescope === '1m') return 'bg-purple-600/80 border-purple-400';
-
-        // 4. Type Match (for special session types)
-        if (PROPOSAL_COLORS[type]) return PROPOSAL_COLORS[type];
-
-        // 5. Fallback Rotation (Consistent based on ID hash)
-        const colorIndex = stringToColorIndex(proposalId);
-        return DEFAULT_COLOR_ROTATION[colorIndex % DEFAULT_COLOR_ROTATION.length];
-    };
-
-    // Split sessions by telescope
-    const sessions24m = sessions.filter(s => s.telescope === '2.4m');
-    const sessions1m = sessions.filter(s => s.telescope === '1m');
-    const hasSessions = sessions.length > 0;
-
-    // Sorted list for display: 2.4m first, then 1m
-    const displayList = [...sessions24m, ...sessions1m];
+    // Both tracks share one axis; it only widens past 05:00 on nights that need it.
+    const range = nightRange(sessions);
+    const ticks = hourTicks(range);
+    const extended = range.end > 29 * 60;
+    const fli = sessions.reduce((max, s) => Math.max(max, s.moonPhase || 0), 0);
+    const displayList = TELESCOPES.flatMap(t => sessions.filter(s => s.telescope === t.id));
 
     return (
         <div className="space-y-6">
             {/* Date Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h2 className="text-3xl font-bold text-white tracking-tight">
-                        {format(date, 'MMMM d, yyyy')}
+                    <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+                        {format(date, 'EEEE, MMMM d, yyyy')}
                     </h2>
                     <p className="text-slate-400">Night Schedule</p>
                 </div>
-                <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700">
+                <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700"
+                    title="FLI: fractional lunar illumination (from the TAC schedule)">
                     <Moon className="text-yellow-100 fill-yellow-100" />
-                    <span className="font-mono text-lg font-bold text-yellow-100">
-                        {hasSessions ? `${sessions[0].moonPhase}%` : '0%'}
-                    </span>
+                    <span className="font-mono text-lg font-bold text-yellow-100">{fli}%</span>
                 </div>
             </div>
 
-            {/* Timeline Visual */}
-            <div className="glass-panel p-6 relative overflow-hidden">
-                <div className="flex justify-between text-xs text-slate-500 mb-2 font-mono ml-[60px]"> {/* Offset for labels */}
-                    {[19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5].map((h) => (
-                        <span key={h}>{String(h).padStart(2, '0')}:00</span>
+            {/* Timeline */}
+            <div className="glass-panel p-4 md:p-6">
+                <div className="flex gap-3">
+                    <div className="w-10 md:w-12 shrink-0" />
+                    <div className="relative flex-1 h-5 text-[10px] md:text-xs text-slate-500 font-mono">
+                        {ticks.map((t, i) => (
+                            <span key={t.label} className={cn("absolute", i % 2 === 1 && "hidden sm:inline")}
+                                style={{ left: `${t.pct}%`, transform: tickShift(t.pct) }}>
+                                {t.label}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-3 mt-1">
+                    {TELESCOPES.map(t => (
+                        <div key={t.id} className="flex items-center gap-3">
+                            <div className={cn("w-10 md:w-12 shrink-0 text-right font-bold text-sm", t.accent)}>{t.label}</div>
+                            <div className="relative flex-1 h-12 bg-slate-900/50 rounded-md overflow-hidden border border-slate-800">
+                                {ticks.map(tick => (
+                                    <div key={tick.label} className="absolute top-0 bottom-0 w-px bg-slate-400/10" style={{ left: `${tick.pct}%` }} />
+                                ))}
+                                {sessions.filter(s => s.telescope === t.id).map(s => (
+                                    <SessionBar key={s.id} session={s} range={range} />
+                                ))}
+                            </div>
+                        </div>
                     ))}
                 </div>
 
-                {/* Helper Grid Lines */}
-                <div className="absolute top-10 bottom-4 left-[84px] right-6 z-0 flex justify-between pointer-events-none opacity-10">
-                    {Array.from({ length: 11 }).map((_, i) => (
-                        <div key={i} className="w-px h-full bg-slate-400"></div>
-                    ))}
-                </div>
-
-                <div className="space-y-4">
-                    {/* Track 2.4m */}
-                    <div className="flex items-center gap-4">
-                        <div className="w-[60px] text-right font-bold text-blue-400 text-sm">2.4m</div>
-                        <div className="h-10 bg-slate-900/50 rounded-lg relative flex-1 overflow-hidden border border-slate-800">
-                            {sessions24m.map((session, index) => (
-                                <div
-                                    key={session.id}
-                                    className={cn(
-                                        "absolute h-6 top-2 rounded-sm opacity-90 hover:opacity-100 transition-all cursor-pointer border-l-2 border-r-2 border-white/10 shadow-lg",
-                                        getTypeColor(session.type || 'PROPOSAL', index, session.telescope, session.proposalId).split(' ')[0]
-                                    )}
-                                    style={getPositionAndWidth(session.timeStart, session.timeEnd)}
-                                    title={`${session.telescope} - ${session.proposalId} (${session.instrument})`}
-                                >
-                                    <span className={cn(
-                                        "hidden md:block text-xs font-bold truncate px-1.5 pt-1",
-                                        isLightColor(getTypeColor(session.type || 'PROPOSAL', index, session.telescope, session.proposalId))
-                                            ? "text-slate-900"
-                                            : "text-white/90"
-                                    )}>
-                                        {session.proposalId} : {session.instrument}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Track 1m */}
-                    <div className="flex items-center gap-4">
-                        <div className="w-[60px] text-right font-bold text-purple-400 text-sm">1m</div>
-                        <div className="h-10 bg-slate-900/50 rounded-lg relative flex-1 overflow-hidden border border-slate-800">
-                            {sessions1m.map((session, index) => (
-                                <div
-                                    key={session.id}
-                                    className={cn(
-                                        "absolute h-6 top-2 rounded-sm opacity-90 hover:opacity-100 transition-all cursor-pointer border-l-2 border-r-2 border-white/10 shadow-lg",
-                                        getTypeColor(session.type || 'PROPOSAL', index, session.telescope, session.proposalId).split(' ')[0]
-                                    )}
-                                    style={getPositionAndWidth(session.timeStart, session.timeEnd)}
-                                    title={`${session.telescope} - ${session.proposalId} (${session.instrument})`}
-                                >
-                                    <span className={cn(
-                                        "hidden md:block text-xs font-bold truncate px-1.5 pt-1",
-                                        isLightColor(getTypeColor(session.type || 'PROPOSAL', index, session.telescope, session.proposalId))
-                                            ? "text-slate-900"
-                                            : "text-white/90"
-                                    )}>
-                                        {session.proposalId} : {session.instrument}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+                {extended && (
+                    <p className="mt-3 text-xs text-amber-300/80">
+                        Allocation runs past 05:00 tonight (per TAC schedule) — timeline extended to {fromNightMinutes(range.end)}
+                    </p>
+                )}
             </div>
 
             {/* Detailed List */}
             <div className="space-y-3">
-                {displayList.map((session, index) => (
+                {displayList.map(session => (
                     <div key={session.id} className={cn(
-                        "glass-panel p-4 flex flex-col md:flex-row items-start md:items-center gap-4 hover:bg-slate-800/80 transition-colors border-l-4 relative overflow-hidden",
-                        session.telescope === '1m' ? "border-l-purple-500 bg-purple-900/10" : "border-l-blue-500"
-                    )}
-                        style={{
-                            borderLeftColor: session.telescope === '1m' ? '#9333ea' : undefined // Purple for 1m
-                        }}
-                    >
-                        {/* 1m Watermark/Badge */}
-                        {session.telescope === '1m' && (
-                            <div className="absolute top-0 right-0 p-1 opacity-10 pointer-events-none">
-                                <Telescope size={80} />
-                            </div>
-                        )}
+                        "glass-panel p-4 flex flex-col md:flex-row items-start md:items-center gap-4 hover:bg-slate-800/80 transition-colors border-l-4",
+                        session.telescope === '1m' ? "border-l-purple-500" : "border-l-blue-500"
+                    )}>
+                        <div className="hidden md:block w-5 h-5 rounded-full shrink-0 border border-white/20"
+                            style={{ backgroundColor: sessionColor(session) }} />
 
-                        {/* Indicator */}
-                        <div className={cn("hidden md:block w-5 h-5 rounded-full mt-1.5 md:mt-0", getTypeColor(session.type || 'PROPOSAL', index, session.telescope, session.proposalId).split(' ')[0])} />
-
-                        {/* Time */}
                         <div className="min-w-[140px]">
                             <div className="font-mono text-lg font-bold text-white">
                                 {session.timeStart} - {session.timeEnd}
                             </div>
-                            <div className={cn("text-xs uppercase tracking-wider font-bold inline-flex items-center gap-1", session.telescope === '1m' ? "text-purple-400" : "text-blue-400")}>
-                                {session.telescope === '1m' && <Telescope size={12} />}
+                            <div className={cn("text-xs uppercase tracking-wider font-bold inline-flex items-center gap-1",
+                                session.telescope === '1m' ? "text-purple-400" : "text-blue-400")}>
+                                <TelescopeIcon size={12} />
                                 {session.telescope} Telescope
                             </div>
                         </div>
 
-                        {/* Instrument */}
-                        <div className="min-w-[120px]">
-                            <span className="bg-slate-700/50 text-slate-200 px-2 py-1 rounded text-sm font-bold border border-slate-600">
-                                {session.instrument}
-                            </span>
+                        <div className="min-w-[110px]">
+                            {instrumentText(session.instrument) && (
+                                <span className="bg-slate-700/50 text-slate-200 px-2 py-1 rounded text-sm font-bold border border-slate-600">
+                                    {session.instrument}
+                                </span>
+                            )}
                         </div>
 
-                        {/* Identification */}
-                        <div className="flex-1 z-10">
-                            <div className="flex items-center gap-2">
-                                <span className="text-white font-bold text-lg">{session.proposalId}</span>
-                                {(session.type || 'PROPOSAL') !== 'PROPOSAL' && (
-                                    <span className="text-xs bg-red-900/50 text-red-200 px-1.5 py-0.5 rounded border border-red-800">
-                                        {session.type}
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-white font-bold text-lg">{sessionLabel(session)}</span>
+                                {typeBadge(session) && (
+                                    <span className="text-xs bg-amber-900/50 text-amber-200 px-1.5 py-0.5 rounded border border-amber-800">
+                                        {typeBadge(session)}
                                     </span>
                                 )}
                             </div>
-                            <div className="text-slate-300 text-sm">{session.piName || 'Unknown PI'}</div>
-                        </div>
-
-                        {/* Research Field */}
-                        <div className="md:text-right min-w-[150px] z-10">
-                            <div className="text-sm text-slate-400">Field of Research</div>
-                            <div className="text-white font-medium">{session.fieldOfResearch || 'N/A'}</div>
+                            <div className="text-slate-400 text-sm font-mono">{session.proposalId}</div>
                         </div>
                     </div>
                 ))}
 
-                {!hasSessions && (
+                {displayList.length === 0 && (
                     <div className="text-center py-12 text-slate-500 glass-panel">
                         No observations scheduled for this night.
                     </div>
@@ -269,7 +168,7 @@ export const DayObservationView: React.FC<DayObservationViewProps> = ({ date, se
                     className="w-full bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all min-h-[80px]"
                 />
                 <div className="text-right text-xs text-slate-500 mt-1 flex justify-end items-center gap-1">
-                    <Save size={12} /> Auto-saved
+                    <Save size={12} /> Auto-saved (this browser only)
                 </div>
             </div>
         </div>

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TNO Schedule Dashboard",
-  description: "Thai National Observatory schedule management and environmental monitoring system",
+  title: "TNO Telescope Schedule",
+  description: "Nightly time allocation for the 2.4m TNT and 1m telescopes at the Thai National Observatory",
 };
 
 export default function RootLayout({

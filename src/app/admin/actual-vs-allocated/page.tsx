@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { ArrowLeft, RefreshCw, Calendar as CalendarIcon } from 'lucide-react';
-import { fetchAndParseSchedule, sortSessionsByTime } from '@/utils/csvParser';
+import { fetchSchedule, sortSessionsByTime } from '@/utils/scheduleData';
 import { fetchActualObservations } from '@/utils/actualDataParser';
 import { calculateDailySummary } from '@/utils/summaryCalculator';
 import { ObservationSession, ActualObservation } from '@/types/schedule';
@@ -28,14 +28,14 @@ export default function AdminActualPage() {
         setError(null);
         try {
             const [allocatedData, actual24, actual1] = await Promise.all([
-                fetchAndParseSchedule(),
+                fetchSchedule().then(r => r.sessions),
                 fetchActualObservations('2.4m'),
                 fetchActualObservations('1m')
             ]);
             setAllocated(allocatedData);
             setActual24m(actual24);
             setActual1m(actual1);
-        } catch (err) {
+        } catch {
             setError('Failed to load admin data.');
         } finally {
             setLoading(false);

@@ -26,6 +26,14 @@ interface WeatherData {
     icon: string;
 }
 
+// Subset of an OpenWeatherMap 5-day/3-hour forecast entry that we read
+interface OwmForecastItem {
+    dt: number;
+    main: { temp_min: number; temp_max: number; humidity: number };
+    clouds: { all: number };
+    weather: { main: string; icon: string }[];
+}
+
 interface ForecastItem {
     dt: number;
     temp: {
@@ -42,7 +50,7 @@ interface ForecastItem {
 export const WeatherWidget: React.FC = () => {
     const [weather, setWeather] = useState<WeatherData | null>(null);
     const [forecast, setForecast] = useState<ForecastItem[]>([]);
-    const [astroTimes, setAstroTimes] = useState<any>(null);
+    const [astroTimes, setAstroTimes] = useState<Record<string, Date> | null>(null);
     const [showForecast, setShowForecast] = useState(false);
 
     useEffect(() => {
@@ -50,7 +58,6 @@ export const WeatherWidget: React.FC = () => {
 
         // 1. Calculate Astronomy Data (Offline using SunCalc)
         const times = SunCalc.getTimes(now, LAT, LON);
-        const moon = SunCalc.getMoonIllumination(now);
         const moonTimes = SunCalc.getMoonTimes(now, LAT, LON);
 
         setAstroTimes({
@@ -153,7 +160,7 @@ export const WeatherWidget: React.FC = () => {
                     // Process 3-hour steps into daily summary (approximate)
                     const dailyMap = new Map();
 
-                    dataForecast.list.forEach((item: any) => {
+                    dataForecast.list.forEach((item: OwmForecastItem) => {
                         const date = new Date(item.dt * 1000).toDateString();
                         if (!dailyMap.has(date)) {
                             dailyMap.set(date, {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { fetchAndParseDailyStats, DailyStat } from '@/utils/csvParser';
+import { fetchAndParseDailyStats, DailyStat } from '@/utils/dailyStats';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 import Link from 'next/link';

@@ -1,13 +1,19 @@
-export type SessionType = 'PROPOSAL' | 'ENG' | 'DDT' | 'GTO' | 'OPT' | 'OH' | 'Calibration';
+export type Telescope = '2.4m' | '1m';
 
 export type ObservationStatus = 'Observation' | 'Weather' | 'Technical';
 
-export interface ProposalInfo {
-    proposalId: string;
-    type: string;
-    piName: string;
-    fieldOfResearch: string;
-    requestInstrument: string;
+/** public/schedule_meta.json — written by the tac-schedule-pdf skill (export_csv.py). */
+export interface ScheduleMeta {
+    cycle: string; // e.g. C14
+    generatedFrom?: string;
+    generatedAt?: string;
+    telescopes: Partial<Record<Telescope, {
+        version: string; // e.g. V0.20261015
+        start: string; // YYYY-MM-DD
+        end: string;
+        sourcePdf?: string;
+        file: string; // CSV file name in public/
+    }>>;
 }
 
 export interface ObservationSegment {
@@ -33,25 +39,19 @@ export interface ActualObservation {
 
 export interface ObservationSession {
     id: string;
-    telescope: '2.4m' | '1m';
+    telescope: Telescope;
     date: string; // YYYY-MM-DD (Start of night)
-    moonPhase: number; // 0-100
-    proposalId: string;
+    moonPhase: number; // FLI 0-100
+    proposalId: string; // TNTC14_005, GTO, BUF, ...
     instrument: string;
     timeStart: string; // HH:mm
-    timeEnd: string; // HH:mm
+    timeEnd: string; // HH:mm (may be after 05:00 on some 1m nights)
     allocationId?: string;
-
-    // Joined from ProposalInfo
-    type?: string;
+    shortCode?: string; // number shown in the PDF cell ("5" also for 5D) or special code (G, B, ...)
+    type?: string; // Proposal, DDT, GTO, Engineering, Buffer, Optic, Outreach, Open House
     piName?: string;
-    fieldOfResearch?: string;
+    color?: string; // hex colour from the PDF
 }
-
-export type NightSchedule = {
-    date: string;
-    sessions: ObservationSession[];
-};
 
 export interface DailySummary {
     date: string;

@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { ActualObservation, ObservationStatus, ObservationSession } from '@/types/schedule';
 import { cn } from '@/utils/cn';
+import { toNightMinutes } from '@/utils/time';
 
 interface ActualTimelineViewProps {
     telescope: '2.4m' | '1m';
@@ -27,18 +28,7 @@ export const ActualTimelineView: React.FC<ActualTimelineViewProps> = ({
     allocatedSessions,
     actualObservations
 }) => {
-    const parseTime = (time: string) => {
-        const [h, m] = time.split(':').map(Number);
-        const adjusted = h < 12 ? h + 24 : h;
-        return adjusted + m / 60;
-    };
-
-    const toMinutes = (time: string) => {
-        const [h, m] = time.split(':').map(Number);
-        const adjusted = h < 12 ? h + 24 : h;
-        return adjusted * 60 + m;
-    };
-
+    const parseTime = (time: string) => toNightMinutes(time) / 60;
     const actualCandidates = useMemo(
         () => actualObservations.filter(o => !o.isCalibration),
         [actualObservations]
@@ -65,7 +55,7 @@ export const ActualTimelineView: React.FC<ActualTimelineViewProps> = ({
 
         const consider = (time?: string) => {
             if (!time) return;
-            const minutes = toMinutes(time);
+            const minutes = toNightMinutes(time);
             min = Math.min(min, minutes);
             max = Math.max(max, minutes);
         };
@@ -134,8 +124,8 @@ export const ActualTimelineView: React.FC<ActualTimelineViewProps> = ({
             if (exact) return exact;
         }
 
-        const sessionStart = toMinutes(session.timeStart);
-        const sessionEnd = toMinutes(session.timeEnd);
+        const sessionStart = toNightMinutes(session.timeStart);
+        const sessionEnd = toNightMinutes(session.timeEnd);
 
         let best: ActualObservation | null = null;
         let bestSegOverlap = 0;
@@ -144,13 +134,13 @@ export const ActualTimelineView: React.FC<ActualTimelineViewProps> = ({
         actualCandidates
             .filter(a => a.proposalId === session.proposalId)
             .forEach(candidate => {
-                const allocStart = toMinutes(candidate.allocatedStart);
-                const allocEnd = toMinutes(candidate.allocatedEnd);
+                const allocStart = toNightMinutes(candidate.allocatedStart);
+                const allocEnd = toNightMinutes(candidate.allocatedEnd);
                 const allocOverlap = getOverlap(sessionStart, sessionEnd, allocStart, allocEnd);
 
                 const segOverlap = candidate.segments.reduce((max, seg) => {
-                    const segStart = toMinutes(seg.actualStart);
-                    const segEnd = toMinutes(seg.actualEnd);
+                    const segStart = toNightMinutes(seg.actualStart);
+                    const segEnd = toNightMinutes(seg.actualEnd);
                     return Math.max(max, getOverlap(sessionStart, sessionEnd, segStart, segEnd));
                 }, 0);
 

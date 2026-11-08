@@ -1,20 +1,10 @@
 import Papa from 'papaparse';
 import { ActualObservation, ObservationSegment, ObservationStatus } from '../types/schedule';
+import { normalizeTime } from './time';
 
 const ACTUAL_DATA_FILES = {
     '2.4m': '/actual_2.4m.csv',
     '1m': '/actual_1m.csv'
-};
-
-const normalizeTime = (time: string | undefined | null): string | null => {
-    if (!time) return null;
-    const trimmed = String(time).trim();
-    const match = trimmed.match(/^(\d{1,2}):(\d{2})$/);
-    if (!match) return null;
-    const h = Number(match[1]);
-    const m = Number(match[2]);
-    if (Number.isNaN(h) || Number.isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
 const mapStatus = (raw: string | undefined | null): ObservationStatus => {
@@ -44,7 +34,7 @@ export async function fetchActualObservations(telescope: '2.4m' | '1m'): Promise
                 header: true,
                 skipEmptyLines: true,
                 complete: (results) => {
-                    const rawData = results.data as any[];
+                    const rawData = results.data as Record<string, string>[];
                     const grouped: Record<string, ActualObservation> = {};
 
                     rawData.forEach((row) => {

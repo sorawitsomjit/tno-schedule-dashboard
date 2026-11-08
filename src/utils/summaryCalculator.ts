@@ -59,7 +59,7 @@ function getDurationInMinutes(start: string, end: string): number {
     const s = parseTime(start);
     const e = parseTime(end);
 
-    let startTotal = s.h * 60 + s.m;
+    const startTotal = s.h * 60 + s.m;
     let endTotal = e.h * 60 + e.m;
 
     if (endTotal < startTotal) {
