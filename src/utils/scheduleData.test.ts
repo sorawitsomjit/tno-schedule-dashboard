@@ -4,7 +4,7 @@ import { sessionLabel, textColorFor, typeBadge } from './sessionDisplay';
 
 const CSV = `Date,Telescope,ProposalID,ShortCode,Type,PIName,Instrument,TimeStart,TimeEnd,MoonPhase,Color
 2027-01-30,2.4m,OH,OH,Open House,Open House,Eyepiece,19:00,00:00,40,#404040
-2027-01-30,2.4m,TNTC14_005,5,DDT,Napaporn,ULTRASPEC,00:00,02:00,40,#000000
+2027-01-30,2.4m,DDT,5D,DDT,DDT,-,00:00,02:00,40,#000000
 2027-01-30,2.4m,TNTC14_005,5,Proposal,Napaporn,ULTRASPEC,02:00,05:00,40,#76D6FF
 2027-01-31,2.4m,,,,,,19:00,05:00,,
 `;
@@ -19,8 +19,8 @@ describe('parseScheduleCsv', () => {
   it('keeps type, short code, colour and moon phase from the CSV', () => {
     const ddt = sessions[1];
     expect(ddt).toMatchObject({
-      date: '2027-01-30', telescope: '2.4m', proposalId: 'TNTC14_005', shortCode: '5', type: 'DDT',
-      piName: 'Napaporn', instrument: 'ULTRASPEC', timeStart: '00:00', timeEnd: '02:00',
+      date: '2027-01-30', telescope: '2.4m', proposalId: 'DDT', shortCode: '5D', type: 'DDT',
+      piName: 'DDT', instrument: '-', timeStart: '00:00', timeEnd: '02:00',
       moonPhase: 40, color: '#000000',
     });
   });
@@ -40,9 +40,13 @@ describe('sortSessionsByTime', () => {
 });
 
 describe('sessionLabel', () => {
-  it('shows proposal number and PI for proposals and DDT-for-proposal', () => {
+  it('shows proposal number and PI for proposals', () => {
     expect(sessionLabel({ type: 'Proposal', shortCode: '5', piName: 'Napaporn' })).toBe('#5 Napaporn');
-    expect(sessionLabel({ type: 'DDT', shortCode: '5', piName: 'Napaporn' })).toBe('#5 Napaporn');
+  });
+
+  it('shows xD DDT codes exactly as in the PDF', () => {
+    expect(sessionLabel({ type: 'DDT', shortCode: '5D', piName: 'DDT' })).toBe('5D');
+    expect(sessionLabel({ type: 'DDT', shortCode: '18D', piName: 'DDT' })).toBe('18D');
   });
 
   it('shows the type name for special time', () => {
@@ -54,7 +58,8 @@ describe('sessionLabel', () => {
 
 describe('typeBadge', () => {
   it('only badges a type that the label does not already say', () => {
-    expect(typeBadge({ type: 'DDT', shortCode: '5', piName: 'Napaporn' })).toBe('DDT');
+    expect(typeBadge({ type: 'DDT', shortCode: '5D', piName: 'DDT' })).toBe('DDT');
+    expect(typeBadge({ type: 'DDT', shortCode: 'DDT', piName: 'DDT' })).toBeNull();
     expect(typeBadge({ type: 'Proposal', shortCode: '5', piName: 'Napaporn' })).toBeNull();
     expect(typeBadge({ type: 'Open House', shortCode: 'OH', piName: 'Open House' })).toBeNull();
   });

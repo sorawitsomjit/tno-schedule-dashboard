@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeTime, toNightMinutes } from './time';
-import { nightRange, barPosition, hourTicks } from './timeline';
+import { nightRange, barPosition, hourTicks, twilightOnAxis } from './timeline';
 
 describe('normalizeTime', () => {
   it('pads single-digit hours and rejects junk', () => {
@@ -41,6 +41,27 @@ describe('barPosition', () => {
     const range = { start: 19 * 60, end: 29 * 60 }; // 10 h
     expect(barPosition(range, '19:00', '00:00')).toEqual({ left: 0, width: 50 });
     expect(barPosition(range, '04:00', '05:00')).toEqual({ left: 90, width: 10 });
+  });
+});
+
+describe('twilightOnAxis', () => {
+  const marks = [
+    { deg: '0°', time: '17:51', side: 'dusk' as const },
+    { deg: '-12°', time: '18:40', side: 'dusk' as const },
+    { deg: '-18°', time: '19:06', side: 'dusk' as const },
+    { deg: '-18°', time: '05:11', side: 'dawn' as const },
+    { deg: '-12°', time: '05:40', side: 'dawn' as const },
+  ];
+
+  it('keeps only twilight lines that fall inside the night axis', () => {
+    const lines = twilightOnAxis({ start: 19 * 60, end: 29 * 60 }, marks);
+    expect(lines.map(l => `${l.deg} ${l.time}`)).toEqual(['-18° 19:06']);
+    expect(lines[0].pct).toBeCloseTo(6 / 600 * 100);
+  });
+
+  it('shows the morning lines when the axis is extended to 06:00', () => {
+    const lines = twilightOnAxis({ start: 19 * 60, end: 30 * 60 }, marks);
+    expect(lines.map(l => `${l.deg} ${l.time}`)).toEqual(['-18° 19:06', '-18° 05:11', '-12° 05:40']);
   });
 });
 

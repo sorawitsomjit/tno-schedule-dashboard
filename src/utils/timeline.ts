@@ -27,6 +27,21 @@ export function barPosition(range: NightRange, timeStart: string, timeEnd: strin
     return { left: ((s - range.start) / total) * 100, width: (Math.max(0, e - s) / total) * 100 };
 }
 
+export interface TwilightMark {
+    deg: string; // '0°' | '-6°' | '-12°' | '-18°'
+    time: string; // HH:mm local
+    side: 'dusk' | 'dawn';
+}
+
+/** Twilight marks that fall strictly inside the axis, with their position in percent. */
+export function twilightOnAxis(range: NightRange, marks: TwilightMark[]): (TwilightMark & { pct: number })[] {
+    return marks.flatMap(m => {
+        const minutes = toNightMinutes(m.time); // evening stays on the date, morning moves to the next day
+        if (minutes <= range.start || minutes >= range.end) return [];
+        return [{ ...m, pct: ((minutes - range.start) / (range.end - range.start)) * 100 }];
+    });
+}
+
 /** Whole-hour labels inside the range with their position in percent. */
 export function hourTicks(range: NightRange): { label: string; pct: number }[] {
     const ticks = [];

@@ -1,5 +1,6 @@
 import SunCalc from 'suncalc';
-import { addDays } from 'date-fns';
+import { addDays, format } from 'date-fns';
+import type { TwilightMark } from './timeline';
 
 // Doi Inthanon (TNO)
 export const LAT = 18.5853;
@@ -19,7 +20,16 @@ export interface NightSkyTimes {
     scienceMinutes: number; // astro dusk -> astro dawn
 }
 
-const atNoon = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12);
+/** Sunset/twilight/sunrise of the night as HH:mm marks for the timeline. */
+export function twilightMarks(t: NightSkyTimes): TwilightMark[] {
+    const marks: [string, Date, TwilightMark['side']][] = [
+        ['0°', t.sunset, 'dusk'], ['-6°', t.dusk, 'dusk'], ['-12°', t.nauticalDusk, 'dusk'], ['-18°', t.night, 'dusk'],
+        ['-18°', t.nightEnd, 'dawn'], ['-12°', t.nauticalDawn, 'dawn'], ['-6°', t.dawn, 'dawn'], ['0°', t.sunrise, 'dawn'],
+    ];
+    return marks.map(([deg, time, side]) => ({ deg, time: format(time, 'HH:mm'), side }));
+}
+
+const atNoon =(d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12);
 
 /** Sky timings for the night that starts on `nightDate`: evening of that date, morning of the next. */
 export function nightSkyTimes(nightDate: Date): NightSkyTimes {

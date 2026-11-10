@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { ObservationSession, Telescope } from '@/types/schedule';
 import { format } from 'date-fns';
 import { cn } from '@/utils/cn';
-import { nightRange, hourTicks } from '@/utils/timeline';
+import { nightRange, hourTicks, twilightOnAxis } from '@/utils/timeline';
+import { nightSkyTimes, twilightMarks } from '@/utils/skyTimes';
 import { fromNightMinutes } from '@/utils/time';
 import { instrumentText, sessionColor, sessionLabel, typeBadge } from '@/utils/sessionDisplay';
 import { SessionBar } from '@/components/SessionBar';
@@ -17,6 +18,8 @@ interface DayObservationViewProps {
 
 // Keep the first/last hour labels inside the axis.
 const tickShift = (pct: number) => (pct < 2 ? 'none' : pct > 98 ? 'translateX(-100%)' : 'translateX(-50%)');
+// Longer twilight labels need a wider margin before they hug the edge.
+const labelShift = (pct: number) => (pct < 10 ? 'none' : pct > 90 ? 'translateX(-100%)' : 'translateX(-50%)');
 
 const TELESCOPES: { id: Telescope; label: string; accent: string }[] = [
     { id: '2.4m', label: '2.4m', accent: 'text-blue-400' },
@@ -48,6 +51,8 @@ export const DayObservationView: React.FC<DayObservationViewProps> = ({ date, se
     const range = nightRange(sessions);
     const ticks = hourTicks(range);
     const extended = range.end > 29 * 60;
+    // Dashed twilight lines (sun altitude) that fall on tonight's axis
+    const twilight = twilightOnAxis(range, twilightMarks(nightSkyTimes(date)));
     const fli = sessions.reduce((max, s) => Math.max(max, s.moonPhase || 0), 0);
     const displayList = TELESCOPES.flatMap(t => sessions.filter(s => s.telescope === t.id));
 
@@ -93,10 +98,33 @@ export const DayObservationView: React.FC<DayObservationViewProps> = ({ date, se
                                 {sessions.filter(s => s.telescope === t.id).map(s => (
                                     <SessionBar key={s.id} session={s} range={range} />
                                 ))}
+                                {twilight.map(m => (
+                                    <div key={`${m.side}${m.deg}`}
+                                        className={cn("absolute top-0 bottom-0 border-dashed pointer-events-none",
+                                            m.deg === '-18°' ? "border-l-2 border-amber-300" : "border-l border-slate-200/60")}
+                                        style={{ left: `${m.pct}%` }} />
+                                ))}
                             </div>
                         </div>
                     ))}
                 </div>
+
+                {twilight.some(m => m.deg === '-18°') && (
+                    <div className="flex gap-3 mt-1">
+                        <div className="w-10 md:w-12 shrink-0" />
+                        <div className="relative flex-1 h-4 text-[10px] md:text-xs font-mono">
+                            {twilight.filter(m => m.deg === '-18°').map(m => (
+                                <span key={m.side} className="absolute whitespace-nowrap text-amber-300"
+                                    style={{ left: `${m.pct}%`, transform: labelShift(m.pct) }}>
+                                    {m.side === 'dusk' ? 'Astro dusk' : 'Astro dawn'} {m.time}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                <p className="mt-2 text-[11px] text-slate-500">
+                    Dashed lines — amber: −18° astronomical twilight · grey: −12° / −6° / 0°. Exact times are in the Sky Timings card.
+                </p>
 
                 {extended && (
                     <p className="mt-3 text-xs text-amber-300/80">

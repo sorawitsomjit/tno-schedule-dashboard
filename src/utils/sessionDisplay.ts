@@ -19,12 +19,12 @@ export function textColorFor(hex: string): string {
     return 0.299 * r + 0.587 * g + 0.114 * b < 140 ? '#ffffff' : '#0f172a';
 }
 
-/** Proposal time (incl. DDT given to a proposal) -> "#5 Napaporn"; special time -> its type name. */
+/** Proposal -> "#5 Napaporn"; DDT code like 5D -> "5D" as in the PDF; other special time -> its type name. */
 export function sessionLabel(session: Pick<ObservationSession, 'type' | 'shortCode' | 'piName'>): string {
-    if (session.shortCode && /^\d+$/.test(session.shortCode)) {
-        return `#${session.shortCode} ${session.piName ?? ''}`.trim();
-    }
-    return session.type || session.shortCode || '';
+    const code = session.shortCode ?? '';
+    if (/^\d+$/.test(code)) return `#${code} ${session.piName ?? ''}`.trim();
+    if (/^\d+D$/.test(code)) return code;
+    return session.type || code;
 }
 
 /** Badge text when the type adds information to the label (e.g. "#5 Napaporn" + DDT); null otherwise. */
