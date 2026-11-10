@@ -68,6 +68,13 @@ export default function Home() {
   }
 
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+  // Whole cycle (earliest start .. latest end over both telescopes) for the sky timing CSV
+  const ranges = meta ? Object.values(meta.telescopes).filter(t => t !== undefined) : [];
+  const cycle = meta && ranges.length ? {
+    label: meta.cycle,
+    start: parseISO(ranges.map(t => t.start).sort()[0]),
+    end: parseISO(ranges.map(t => t.end).sort().slice(-1)[0]),
+  } : undefined;
   const daySessions = sortSessionsByTime(allSessions.filter(s => s.date === selectedDateStr));
 
   return (
@@ -86,7 +93,7 @@ export default function Home() {
         <div className="rounded-lg border border-red-900/50 bg-red-950/40 px-4 py-3 text-sm text-red-200">{loadError}</div>
       )}
 
-      <WeatherWidget date={selectedDate} />
+      <WeatherWidget date={selectedDate} cycle={cycle} />
 
       <div className="grid grid-cols-1 gap-8">
         <section>

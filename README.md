@@ -11,7 +11,10 @@ Built with Next.js 16, React 19 and Tailwind CSS 4. All data is static files in 
 - Bars use the **same colours and numbers as the TAC PDF** (`#5 Napaporn`), DDT/GTO/Buffer/... are labelled
 - Session list, FLI (moon %) per night, full schedule table (this month / all)
 - Shift-aligned "Today" (rolls over at 07:00); open a specific night with `/?date=2027-01-30`
-- Sky timings for the selected night (SunCalc; matches the TAC PDF twilight) and live weather (OpenWeatherMap)
+- Dashed twilight lines on the timeline; sky timings for the selected night (SunCalc; matches the TAC PDF twilight)
+- **CSV button** downloads sky timings + moon illumination for every night of the cycle
+- FLI (moon %) from the TAC schedule; computed for nights outside the schedule
+- Live weather (OpenWeatherMap)
 
 ## Updating the schedule (new cycle or new PDF version)
 

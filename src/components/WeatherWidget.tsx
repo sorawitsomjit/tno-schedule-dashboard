@@ -3,15 +3,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Cloud, Droplets, Wind, Sun, Moon, Clock, ArrowDown, ArrowUp, MapPin, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { format } from 'date-fns';
-import { logSkyTiming, exportSkyTimingCSV, getSkyTimingLog } from '@/utils/skyTimingLogger';
-import { LAT, LON, nightSkyTimes } from '@/utils/skyTimes';
+import { LAT, LON, formatDuration, nightSkyTimes, skyTimingCsv } from '@/utils/skyTimes';
 
 // OpenWeatherMap API Configuration
 // Set NEXT_PUBLIC_OPENWEATHER_API_KEY in your .env file
 const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || '';
 
-// Toggle: Enable/Disable Sky Timing Log Download Feature
-const ENABLE_SKY_LOG_DOWNLOAD = true; // Set to false to hide download button
 
 interface WeatherData {
     temp: number;
@@ -43,39 +40,27 @@ interface ForecastItem {
     date: Date;
 }
 
-const hhmmDuration = (minutes: number) =>
-    `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-
 interface WeatherWidgetProps {
     date: Date; // night being viewed: sky timings follow it, weather stays live (today)
+    cycle?: { label: string; start: Date; end: Date }; // range for the sky timing CSV
 }
 
-export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ date }) => {
+const downloadText = (filename: string, text: string) => {
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ date, cycle }) => {
     const [weather, setWeather] = useState<WeatherData | null>(null);
     const [forecast, setForecast] = useState<ForecastItem[]>([]);
     const [showForecast, setShowForecast] = useState(false);
     const astroTimes = useMemo(() => nightSkyTimes(date), [date]);
 
     useEffect(() => {
-        // Auto-log tonight's sky timings (once per day) for the CSV export
-        const now = new Date();
-        const todayStr = format(now, 'yyyy-MM-dd');
-        if (!getSkyTimingLog().some(r => r.date === todayStr)) {
-            const t = nightSkyTimes(now);
-            logSkyTiming({
-                date: todayStr,
-                sunset: format(t.sunset, 'HH:mm'),
-                civilDusk: format(t.dusk, 'HH:mm'),
-                nauticalDusk: format(t.nauticalDusk, 'HH:mm'),
-                astroDusk: format(t.night, 'HH:mm'),
-                astroDawn: format(t.nightEnd, 'HH:mm'),
-                nauticalDawn: format(t.nauticalDawn, 'HH:mm'),
-                civilDawn: format(t.dawn, 'HH:mm'),
-                sunrise: format(t.sunrise, 'HH:mm'),
-                scienceDuration: hhmmDuration(t.scienceMinutes)
-            });
-        }
-
         // 2. Fetch Weather (OpenWeatherMap)
         const fetchWeather = async () => {
             try {
@@ -169,12 +154,12 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ date }) => {
                             <h3 className="font-bold text-slate-200">Sky Timings — night of {format(date, 'd MMM yyyy')}</h3>
                         </div>
 
-                        {/* Sky Timing Log Download Button (Compact) */}
-                        {ENABLE_SKY_LOG_DOWNLOAD && (
+                        {/* Sky timings for every night of the cycle, computed on click */}
+                        {cycle && (
                             <button
-                                onClick={exportSkyTimingCSV}
+                                onClick={() => downloadText(`sky_timings_${cycle.label}.csv`, skyTimingCsv(cycle.start, cycle.end))}
                                 className="flex items-center gap-1 px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white rounded text-xs transition-colors border border-slate-700/50"
-                                title="Download Sky Timing Log CSV"
+                                title={`Download sky timings and moon for every night of ${cycle.label} (CSV)`}
                             >
                                 <Download size={12} />
                                 <span className="hidden sm:inline">CSV</span>
@@ -240,7 +225,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ date }) => {
                         const astroDuskTime = astroTimes.night;
                         const astroDawnTime = astroTimes.nightEnd;
                         if (!astroDuskTime || !astroDawnTime) return null;
-                        const scienceDuration = hhmmDuration(astroTimes.scienceMinutes);
+                        const scienceDuration = formatDuration(astroTimes.scienceMinutes);
 
                         return (
                             <div className="mt-3 pt-2 border-t border-purple-500/20">

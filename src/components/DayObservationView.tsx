@@ -52,8 +52,11 @@ export const DayObservationView: React.FC<DayObservationViewProps> = ({ date, se
     const ticks = hourTicks(range);
     const extended = range.end > 29 * 60;
     // Dashed twilight lines (sun altitude) that fall on tonight's axis
-    const twilight = twilightOnAxis(range, twilightMarks(nightSkyTimes(date)));
-    const fli = sessions.reduce((max, s) => Math.max(max, s.moonPhase || 0), 0);
+    const sky = nightSkyTimes(date);
+    const twilight = twilightOnAxis(range, twilightMarks(sky));
+    // FLI from the TAC schedule when the night is scheduled, otherwise computed (agrees within ±2 %)
+    const fliFromTac = sessions.length > 0;
+    const fli = fliFromTac ? sessions.reduce((max, s) => Math.max(max, s.moonPhase || 0), 0) : sky.moonIllumination;
     const displayList = TELESCOPES.flatMap(t => sessions.filter(s => s.telescope === t.id));
 
     return (
@@ -67,7 +70,7 @@ export const DayObservationView: React.FC<DayObservationViewProps> = ({ date, se
                     <p className="text-slate-400">Night Schedule</p>
                 </div>
                 <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700"
-                    title="FLI: fractional lunar illumination (from the TAC schedule)">
+                    title={`FLI (fractional lunar illumination) — ${fliFromTac ? 'from the TAC schedule' : 'computed'}`}>
                     <Moon className="text-yellow-100 fill-yellow-100" />
                     <span className="font-mono text-lg font-bold text-yellow-100">{fli}%</span>
                 </div>

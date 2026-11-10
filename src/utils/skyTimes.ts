@@ -1,5 +1,5 @@
 import SunCalc from 'suncalc';
-import { addDays, format } from 'date-fns';
+import { addDays, differenceInCalendarDays, format } from 'date-fns';
 import type { TwilightMark } from './timeline';
 
 // Doi Inthanon (TNO)
@@ -17,6 +17,7 @@ export interface NightSkyTimes {
     sunrise: Date;
     moonRise?: Date;
     moonSet?: Date;
+    moonIllumination: number; // % lit at 18:00 local; matches the FLI column of the TAC schedule (±2)
     scienceMinutes: number; // astro dusk -> astro dawn
 }
 
@@ -29,13 +30,13 @@ export function twilightMarks(t: NightSkyTimes): TwilightMark[] {
     return marks.map(([deg, time, side]) => ({ deg, time: format(time, 'HH:mm'), side }));
 }
 
-const atNoon =(d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12);
+const atHour = (d: Date, h: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h);
 
 /** Sky timings for the night that starts on `nightDate`: evening of that date, morning of the next. */
 export function nightSkyTimes(nightDate: Date): NightSkyTimes {
-    const evening = SunCalc.getTimes(atNoon(nightDate), LAT, LON);
-    const morning = SunCalc.getTimes(atNoon(addDays(nightDate, 1)), LAT, LON);
-    const moon = SunCalc.getMoonTimes(atNoon(nightDate), LAT, LON);
+    const evening = SunCalc.getTimes(atHour(nightDate, 12), LAT, LON);
+    const morning = SunCalc.getTimes(atHour(addDays(nightDate, 1), 12), LAT, LON);
+    const moon = SunCalc.getMoonTimes(atHour(nightDate, 12), LAT, LON);
     return {
         sunset: evening.sunset,
         dusk: evening.dusk,
@@ -47,6 +48,28 @@ export function nightSkyTimes(nightDate: Date): NightSkyTimes {
         sunrise: morning.sunrise,
         moonRise: moon.rise,
         moonSet: moon.set,
+        moonIllumination: Math.round(SunCalc.getMoonIllumination(atHour(nightDate, 18)).fraction * 100),
         scienceMinutes: Math.round((morning.nightEnd.getTime() - evening.night.getTime()) / 60000),
     };
+}
+
+const hhmm = (d?: Date) => (d && !isNaN(d.getTime()) ? format(d, 'HH:mm') : '');
+
+export const formatDuration = (minutes: number) =>
+    `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+
+/** Sky timings for every night from `start` to `end` (inclusive) as CSV text. */
+export function skyTimingCsv(start: Date, end: Date): string {
+    const rows = ['Date,Sunset,CivilDusk,NauticalDusk,AstroDusk,AstroDawn,NauticalDawn,CivilDawn,Sunrise,'
+        + 'ScienceDuration,MoonIllumination(%),MoonRise,MoonSet'];
+    for (let i = 0; i <= differenceInCalendarDays(end, start); i++) {
+        const night = addDays(start, i);
+        const t = nightSkyTimes(night);
+        rows.push([
+            format(night, 'yyyy-MM-dd'), hhmm(t.sunset), hhmm(t.dusk), hhmm(t.nauticalDusk), hhmm(t.night),
+            hhmm(t.nightEnd), hhmm(t.nauticalDawn), hhmm(t.dawn), hhmm(t.sunrise),
+            formatDuration(t.scienceMinutes), t.moonIllumination, hhmm(t.moonRise), hhmm(t.moonSet),
+        ].join(','));
+    }
+    return rows.join('\n') + '\n';
 }
