@@ -1,14 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import SunCalc from 'suncalc';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Cloud, Droplets, Wind, Sun, Moon, Clock, ArrowDown, ArrowUp, MapPin, ChevronDown, ChevronUp, Download } from 'lucide-react';
-import { format, differenceInMinutes } from 'date-fns';
+import { format } from 'date-fns';
 import { logSkyTiming, exportSkyTimingCSV, getSkyTimingLog } from '@/utils/skyTimingLogger';
-
-// Doi Inthanon Coordinates
-const LAT = 18.5853;
-const LON = 98.4872;
+import { LAT, LON, nightSkyTimes } from '@/utils/skyTimes';
 
 // OpenWeatherMap API Configuration
 // Set NEXT_PUBLIC_OPENWEATHER_API_KEY in your .env file
@@ -47,78 +43,37 @@ interface ForecastItem {
     date: Date;
 }
 
-export const WeatherWidget: React.FC = () => {
+const hhmmDuration = (minutes: number) =>
+    `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+
+interface WeatherWidgetProps {
+    date: Date; // night being viewed: sky timings follow it, weather stays live (today)
+}
+
+export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ date }) => {
     const [weather, setWeather] = useState<WeatherData | null>(null);
     const [forecast, setForecast] = useState<ForecastItem[]>([]);
-    const [astroTimes, setAstroTimes] = useState<Record<string, Date> | null>(null);
     const [showForecast, setShowForecast] = useState(false);
+    const astroTimes = useMemo(() => nightSkyTimes(date), [date]);
 
     useEffect(() => {
+        // Auto-log tonight's sky timings (once per day) for the CSV export
         const now = new Date();
-
-        // 1. Calculate Astronomy Data (Offline using SunCalc)
-        const times = SunCalc.getTimes(now, LAT, LON);
-        const moonTimes = SunCalc.getMoonTimes(now, LAT, LON);
-
-        setAstroTimes({
-            sunset: times.sunset,         // 0 degrees
-            dusk: times.dusk,             // -6 degrees (Civil)
-            nauticalDusk: times.nauticalDusk, // -12 degrees (Nautical)
-            night: times.night,           // -18 degrees (Astro Start)
-
-            nightEnd: times.nightEnd,     // -18 degrees (Astro End)
-            nauticalDawn: times.nauticalDawn, // -12 degrees
-            dawn: times.dawn,             // -6 degrees
-            sunrise: times.sunrise,       // 0 degrees
-
-            moonRise: moonTimes.rise,
-            moonSet: moonTimes.set
-        });
-
-        // Calculate Science Time (Astro Dusk to Astro Dawn)
-        const calculateScienceTime = () => {
-            if (!times.night || !times.nightEnd) return null;
-
-            const astroDuskTime = times.night;
-            const astroDawnTime = times.nightEnd;
-
-            // Fix: If dawn is before dusk (crosses midnight), add 24 hours to dawn
-            let scienceMinutes = differenceInMinutes(astroDawnTime, astroDuskTime);
-            if (scienceMinutes < 0) {
-                scienceMinutes = scienceMinutes + (24 * 60); // Add 24 hours
-            }
-
-            const scienceHours = Math.floor(scienceMinutes / 60);
-            const scienceRemainder = scienceMinutes % 60;
-
-            return {
-                minutes: scienceMinutes,
-                formatted: `${String(scienceHours).padStart(2, '0')}:${String(scienceRemainder).padStart(2, '0')}`
-            };
-        };
-
-        const scienceTime = calculateScienceTime();
-
-        // Auto-log sky timing data (once per day)
-        if (scienceTime) {
-            const todayStr = format(now, 'yyyy-MM-dd');
-            const existingLog = getSkyTimingLog();
-            const alreadyLogged = existingLog.some(r => r.date === todayStr);
-
-            if (!alreadyLogged) {
-                logSkyTiming({
-                    date: todayStr,
-                    sunset: format(times.sunset, 'HH:mm'),
-                    civilDusk: format(times.dusk, 'HH:mm'),
-                    nauticalDusk: format(times.nauticalDusk, 'HH:mm'),
-                    astroDusk: format(times.night, 'HH:mm'),
-                    astroDawn: format(times.nightEnd, 'HH:mm'),
-                    nauticalDawn: format(times.nauticalDawn, 'HH:mm'),
-                    civilDawn: format(times.dawn, 'HH:mm'),
-                    sunrise: format(times.sunrise, 'HH:mm'),
-                    scienceDuration: scienceTime.formatted
-                });
-            }
+        const todayStr = format(now, 'yyyy-MM-dd');
+        if (!getSkyTimingLog().some(r => r.date === todayStr)) {
+            const t = nightSkyTimes(now);
+            logSkyTiming({
+                date: todayStr,
+                sunset: format(t.sunset, 'HH:mm'),
+                civilDusk: format(t.dusk, 'HH:mm'),
+                nauticalDusk: format(t.nauticalDusk, 'HH:mm'),
+                astroDusk: format(t.night, 'HH:mm'),
+                astroDawn: format(t.nightEnd, 'HH:mm'),
+                nauticalDawn: format(t.nauticalDawn, 'HH:mm'),
+                civilDawn: format(t.dawn, 'HH:mm'),
+                sunrise: format(t.sunrise, 'HH:mm'),
+                scienceDuration: hhmmDuration(t.scienceMinutes)
+            });
         }
 
         // 2. Fetch Weather (OpenWeatherMap)
@@ -201,7 +156,7 @@ export const WeatherWidget: React.FC = () => {
 
     }, []);
 
-    if (!astroTimes || !weather) return null;
+    if (!weather) return null;
 
     return (
         <div className="mb-6 space-y-2">
@@ -211,7 +166,7 @@ export const WeatherWidget: React.FC = () => {
                     <div className="flex items-center justify-between mb-3 border-b border-slate-700/50 pb-2">
                         <div className="flex items-center gap-2">
                             <Sun className="text-orange-400" size={20} />
-                            <h3 className="font-bold text-slate-200">Sky Timings (Today)</h3>
+                            <h3 className="font-bold text-slate-200">Sky Timings — night of {format(date, 'd MMM yyyy')}</h3>
                         </div>
 
                         {/* Sky Timing Log Download Button (Compact) */}
@@ -284,18 +239,8 @@ export const WeatherWidget: React.FC = () => {
                     {(() => {
                         const astroDuskTime = astroTimes.night;
                         const astroDawnTime = astroTimes.nightEnd;
-
                         if (!astroDuskTime || !astroDawnTime) return null;
-
-                        // Fix: Handle midnight crossing
-                        let scienceMinutes = differenceInMinutes(astroDawnTime, astroDuskTime);
-                        if (scienceMinutes < 0) {
-                            scienceMinutes = scienceMinutes + (24 * 60);
-                        }
-
-                        const scienceHours = Math.floor(scienceMinutes / 60);
-                        const scienceRemainder = scienceMinutes % 60;
-                        const scienceDuration = `${String(scienceHours).padStart(2, '0')}:${String(scienceRemainder).padStart(2, '0')}`;
+                        const scienceDuration = hhmmDuration(astroTimes.scienceMinutes);
 
                         return (
                             <div className="mt-3 pt-2 border-t border-purple-500/20">

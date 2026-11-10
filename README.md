@@ -11,7 +11,7 @@ Built with Next.js 16, React 19 and Tailwind CSS 4. All data is static files in 
 - Bars use the **same colours and numbers as the TAC PDF** (`#5 Napaporn`), DDT/GTO/Buffer/... are labelled
 - Session list, FLI (moon %) per night, full schedule table (this month / all)
 - Shift-aligned "Today" (rolls over at 07:00); open a specific night with `/?date=2027-01-30`
-- Sky timings (SunCalc) and weather (OpenWeatherMap)
+- Sky timings for the selected night (SunCalc; matches the TAC PDF twilight) and live weather (OpenWeatherMap)
 
 ## Updating the schedule (new cycle or new PDF version)
 
@@ -54,7 +54,7 @@ Then open `http://<server>:1234`.
 
 ## Project structure
 
-- `src/app/` — pages (`/`, `/stats`, `/admin/actual-vs-allocated`)
+- `src/app/` — the single page (`/`)
 - `src/components/` — `DayObservationView` (timeline + list), `ScheduleTableView`, `SessionBar`, `WeatherWidget`
-- `src/utils/` — `scheduleData` (load/parse CSV), `timeline` (night axis), `sessionDisplay` (labels/colours), `time`
+- `src/utils/` — `scheduleData` (load/parse CSV), `timeline` (night axis), `sessionDisplay` (labels/colours), `skyTimes` (twilight), `time`
 - `public/` — data files (not in git)

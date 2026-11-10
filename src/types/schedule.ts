@@ -1,7 +1,5 @@
 export type Telescope = '2.4m' | '1m';
 
-export type ObservationStatus = 'Observation' | 'Weather' | 'Technical';
-
 /** public/schedule_meta.json — written by the tac-schedule-pdf skill (export_csv.py). */
 export interface ScheduleMeta {
     cycle: string; // e.g. C14
@@ -14,27 +12,6 @@ export interface ScheduleMeta {
         sourcePdf?: string;
         file: string; // CSV file name in public/
     }>>;
-}
-
-export interface ObservationSegment {
-    segmentNumber: number;
-    actualStart: string;
-    actualEnd: string;
-    status: ObservationStatus;
-    notes?: string;
-}
-
-export interface ActualObservation {
-    date: string; // YYYY-MM-DD
-    proposalId: string;
-    instrument: string;
-    allocatedStart: string;
-    allocatedEnd: string;
-    segments: ObservationSegment[];
-    isCalibration?: boolean;
-    calibrationTiming?: 'Evening' | 'Morning';
-    calibrationFor?: string;
-    allocationId?: string;
 }
 
 export interface ObservationSession {
@@ -51,13 +28,4 @@ export interface ObservationSession {
     type?: string; // Proposal, DDT, GTO, Engineering, Buffer, Optic, Outreach, Open House
     piName?: string;
     color?: string; // hex colour from the PDF
-}
-
-export interface DailySummary {
-    date: string;
-    telescope: '2.4m' | '1m';
-    observationTime: number; // minutes
-    weatherLoss: number; // minutes
-    technicalLoss: number; // minutes
-    byProposal: Record<string, number>; // proposalId -> minutes (observation only)
 }

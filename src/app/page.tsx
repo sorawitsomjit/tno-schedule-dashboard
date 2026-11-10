@@ -86,7 +86,7 @@ export default function Home() {
         <div className="rounded-lg border border-red-900/50 bg-red-950/40 px-4 py-3 text-sm text-red-200">{loadError}</div>
       )}
 
-      <WeatherWidget />
+      <WeatherWidget date={selectedDate} />
 
       <div className="grid grid-cols-1 gap-8">
         <section>
